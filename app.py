@@ -7,58 +7,47 @@ import time
 # 1. Configurazione Pagina
 st.set_page_config(page_title="Rally Live Sulcis", layout="wide")
 
-# 2. Identificativi
+# ID estratto dal tuo link
 FILE_ID = "1wjiKfefjCsiCuqkuu74DP2iCo9VHoNaf"
-# URL diretto per il download senza parametri che disturbano il server
-CSV_URL = f"https://docs.google.com/spreadsheets/d/{FILE_ID}/export?format=csv"
 
-# 3. Funzione di recupero dati
+# URL specifico per il download diretto di file caricati (non Google Sheets)
+CSV_URL = f"https://drive.google.com/uc?export=download&id={FILE_ID}&confirm=t"
+
 def fetch_rally_data():
     try:
-        # Download tramite requests per bypassare limitazioni di pandas
-        response = requests.get(CSV_URL, timeout=10)
-        
-        # Se il server risponde con errore (es. 403 o 404), viene generata un'eccezione
+        # Sessione per gestire eventuali cookie di sicurezza di Google
+        session = requests.Session()
+        response = session.get(CSV_URL, timeout=10)
         response.raise_for_status()
         
-        # Lettura del contenuto CSV in memoria
+        # Caricamento dati
         return pd.read_csv(io.BytesIO(response.content))
-    
-    except requests.exceptions.HTTPError as e:
-        if "400" in str(e):
-            st.error("❌ Errore 400: Richiesta malformata. Verifica l'ID del file.")
-        elif "403" in str(e):
-            st.error("❌ Errore 403: Accesso Negato. Imposta il file su Drive come 'PUBBLICO'.")
-        else:
-            st.error(f"⚠️ Errore Server: {e}")
-        return None
     except Exception as e:
-        st.error(f"📡 Errore Connessione: {e}")
+        st.error(f"⚠️ Errore di sincronizzazione: {e}")
+        st.info("Verifica che il file su Drive abbia 'Accesso generale: Chiunque abbia il link'.")
         return None
 
-# 4. Interfaccia Utente
-st.title("⏱️ Rally Live Sulcis - PS10")
+# --- Interfaccia Grafica ---
+st.title("🏁 Rally Live Sulcis - PS10")
 
-data_frame = fetch_rally_data()
+df = fetch_rally_data()
 
-if data_frame is not None and not data_frame.empty:
-    # Mostra i primi 3 classificati
+if df is not None:
+    # Top 3 Metrics
     cols = st.columns(3)
-    titles = ["🥇 1° Posto", "🥈 2° Posto", "🥉 3° Posto"]
-    for i, col in enumerate(cols):
-        if len(data_frame) > i:
-            col.metric(titles[i], data_frame.iloc[i]['Pilota'])
-
-    st.divider()
-
-    # Tabella principale
-    st.subheader("Classifica in tempo reale")
-    st.dataframe(data_frame, use_container_width=True, hide_index=True)
+    for i in range(min(3, len(df))):
+        nome = df.iloc[i]['Pilota'] if 'Pilota' in df.columns else "N/D"
+        cols[i].metric(f"{i+1}° Posizione", nome)
     
+    st.divider()
+    
+    # Tabella Classifica
+    st.subheader("Classifica Completa")
+    st.dataframe(df, use_container_width=True, hide_index=True)
     st.caption(f"Ultimo aggiornamento: {time.strftime('%H:%M:%S')}")
 else:
-    st.warning("In attesa di dati validi da Google Drive...")
+    st.warning("In attesa di connessione con il database di gara...")
 
-# 5. Logica Refresh (25 secondi)
-time.sleep(25)
+# Refresh automatico ogni 30 secondi
+time.sleep(30)
 st.rerun()

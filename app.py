@@ -4,7 +4,7 @@ import time
 import random
 
 FILE_ID = "1wjiKfefjCsiCuqkuu74DP2iCo9VHoNaf"
-URL = f"https://docs.google.com/spreadsheets/d/1wjiKfefjCsiCuqkuu74DP2iCo9VHoNaf/export?format=csv"
+URL = f"https://docs.google.com/spreadsheets/d/{FILE_ID}/export?format=csv"
 
 st.set_page_config(page_title="Rally Live", layout="wide")
 
